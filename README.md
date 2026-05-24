@@ -12,4 +12,10 @@ A line follower robot with Raspberry Pi Pico
 2) Maker Driver: Simplifying H-Bridge Motor Driver to Beginner
 3) N20 gear motor 1000 rpm
 4) DC-DC Boost Buck Adjustable Step Up and Step Down Automatic Converter XL6009 Module
-5) 
+5) Waveshare Ανιχνευτής Ακολουθίας Γραμμής - 5-Channels
+6) 44x19mm D axis rubber tire (x2)
+7) Mini ball caster for Smart Car
+8) 40P 10cm wire female to male
+9) 40P 10cm wire female to female
+10) Μπαταρία Λιθίου των 7,2 V και 500 mAh
+11) Chassis
