@@ -1,0 +1,109 @@
+from machine import Pin, PWM, ADC
+import time
+
+# --- 1. ΡΥΘΜΙΣΕΙΣ ΜΟΤΕΡ ---
+pwm_a = PWM(Pin(10)) 
+pwm_a.freq(1000)
+dir_a = Pin(11, Pin.OUT)
+
+pwm_b = PWM(Pin(12)) 
+pwm_b.freq(1000)
+dir_b = Pin(13, Pin.OUT)
+
+# --- 2. ΡΥΘΜΙΣΕΙΣ ΑΙΣΘΗΤΗΡΩΝ ---
+ir1 = Pin(2, Pin.IN)
+ir2 = ADC(Pin(26))
+ir3 = ADC(Pin(27))
+ir4 = ADC(Pin(28))
+ir5 = Pin(3, Pin.IN)
+
+# --- 3. ΠΑΡΑΜΕΤΡΟΙ PID ---
+base_speed = 31000 
+Kp = 17000         
+Kd = 9700          
+THRESHOLD = 30000 
+
+last_error = 0
+last_direction = 0  # Μνήμη κατεύθυνσης: -1 = Αριστερά, 1 = Δεξιά
+
+# Μεταβλητή κλειδώματος: False = Τρέχει, True = Έχει τερματίσει και έχει σβήσει
+finished = False 
+
+def set_motor_speed(left, right):
+    left = max(min(int(left), 65535), -65535)
+    right = max(min(int(right), 65535), -65535)
+
+    dir_a.value(0 if left >= 0 else 1)
+    pwm_a.duty_u16(abs(left))
+    
+    dir_b.value(0 if right >= 0 else 1)
+    pwm_b.duty_u16(abs(right))
+
+def get_sensors():
+    v1 = 1 if ir1.value() == 0 else 0
+    v2 = 1 if ir2.read_u16() < THRESHOLD else 0
+    v3 = 1 if ir3.read_u16() < THRESHOLD else 0
+    v4 = 1 if ir4.read_u16() < THRESHOLD else 0
+    v5 = 1 if ir5.value() == 0 else 0
+    return [v1, v2, v3, v4, v5]
+
+# Μικρή καθυστέρηση για να προλάβεις να το αφήσεις στην πίστα
+time.sleep(1)
+
+while True:
+    # Αν έχει ενεργοποιηθεί το κλείδωμα τερματισμού, κράτα τα μοτέρ σβηστά για πάντα
+    if finished:
+        set_motor_speed(0, 0)
+        time.sleep(0.1)
+        continue
+
+    vals = get_sensors()
+    
+    # ΑΠΟΘΗΚΕΥΣΗ ΜΝΗΜΗΣ: Όσο βλέπει τη γραμμή, κρατάει την πλευρά
+    if vals[0] == 1 or vals[1] == 1:
+        last_direction = -1  
+    if vals[3] == 1 or vals[4] == 1:
+        last_direction = 1   
+        
+    weights = [-2, -1, 0, 1, 2]
+    error = 0
+    active = 0
+    
+    for i in range(5):
+        if vals[i] == 1:
+            error += weights[i]
+            active += 1
+            
+    # --- ΕΛΕΓΧΟΣ ΚΙΝΗΣΗΣ ---
+    if active >= 4:
+        # === ΚΛΕΙΔΩΜΑ ΤΕΡΜΑΤΙΣΜΟΥ ===
+        # Αν δει 4 ή 5 αισθητήρες μαύρους, σταματάει ΑΚΑΡΙΑΙΑ και κλειδώνει
+        set_motor_speed(0, 0)
+        finished = True 
+        print("ΤΕΡΜΑΤΙΣΜΟΣ!")
+        
+    elif active == 0:
+        # === ΛΕΙΤΟΥΡΓΙΑ ΕΠΑΝΑΦΟΡΑΣ (RECOVERY MODE) ===
+        search_speed = 22000
+        if last_direction == 1:
+            set_motor_speed(search_speed, -search_speed)  
+        else:
+            set_motor_speed(-search_speed, search_speed)  
+        
+    else:
+        # === ΚΑΝΟΝΙΚΗ ΠΛΟΗΓΗΣΗ PID ===
+        current_error = error / active
+        
+        if abs(current_error) >= 1.5:
+            P = (Kp * 1.8) * current_error  
+            D = (Kd * 2.0) * (current_error - last_error) 
+        else:
+            P = Kp * current_error
+            D = Kd * (current_error - last_error)
+        
+        correction = int(P + D)
+        
+        set_motor_speed(base_speed + correction, base_speed - correction)
+        last_error = current_error
+        
+    time.sleep(0.001)
