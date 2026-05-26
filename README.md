@@ -9,7 +9,7 @@ A line follower robot with Raspberry Pi Pico
 4) Βελτιστοποίηση Ταχύτητας: Επίτευξη της μέγιστης δυνατής ταχύτητας κίνησης (base_speed) στην ευθεία, χωρίς να χάνεται η σταθερότητα του ρομπότ στις κλειστές στροφές.
 
 Τα υλικά που χρειάζονται:
-1) Πλακέτα Raspberry Pi Pico W with Headers
+1) Πλακέτα Raspberry Pi Pico with Headers
 2) Maker Driver: Simplifying H-Bridge Motor Driver to Beginner
 3) N20 gear motor 1000 rpm
 4) DC-DC Boost Buck Adjustable Step Up and Step Down Automatic Converter XL6009 Module
